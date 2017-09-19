@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <math.h> //random
 #include <stdlib.h> //atoi, exit
-#include <time.h> //cronometro
+#include <sys/time.h> //cronometro
 
 #define TIPO double
 
@@ -55,9 +55,7 @@ int main(int argc, char const *argv[])
 	for (i = 0; i < n; i++)
       matriz[i] = calloc(n, sizeof(TIPO));
 	
-	// contagem do tempo
-	struct timeval tm;
-	gettimeofday(&tm, NULL);
+	//inicio da contagem de tempo
 
 	//vai ser usado no random do preenchimento
 	// srandom(tm.tv_sec + tm.tv_usec * 1000000ul);
@@ -70,22 +68,22 @@ int main(int argc, char const *argv[])
 	}
 
 	//inicio da contagem de tempo
-	clock_t begin = clock();
-	// #pragma omp parallel for private(i) reduction(+:sum) 
+	struct timeval  tv1, tv2;
+	gettimeofday(&tv1, NULL);
+
 	for (i=0; i<n; i++) {
 		for (j = 0; j < n; j++)	{
 			sum += matriz[i][j];
-			// printf("%f ", matriz[i][j] );
 		}
-		// printf("\n");
 	}
 
 
-	clock_t end = clock();
-	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	gettimeofday(&tv2, NULL);
+	printf ("Total time = %f seconds\n",
+         (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
+         (double) (tv2.tv_sec - tv1.tv_sec));
 
 	free(matriz);
-	printf("tempo gasto = %f\n", time_spent );
 
 	printf("sum = %f \n", sum );
 	return 0;
