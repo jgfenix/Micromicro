@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include "mpi.h"
 
-main(int argc, char* argv[]) 
+int main(int argc, char* argv[]) 
 {
   double *x, *y, *local_x, *local_y;
   int    n_bar;  /* = n/p */
@@ -36,7 +36,7 @@ main(int argc, char* argv[])
     n = atoi(argv[1]);
     x = (double *) calloc(n, sizeof(double));
     y = (double *) calloc(n, sizeof(double));
-    for (i=0; i<n; i++) {x[i] = 1.0;  y[i] = 1.0;}
+    for (i=0; i<n; i++) {x[i] = i;  y[i] = i; printf("%f ", x[i]);}
   }
   
   // Envio do valor de n para todos os processos
@@ -50,8 +50,6 @@ main(int argc, char* argv[])
   else {
     MPI_Recv(&n, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status) ;
   }
-
-  printf("n= %d | rank= %d\n",n, my_rank );
 
   n_bar = n/p;
   local_x = (double *) calloc(n_bar, sizeof(double));
@@ -102,9 +100,9 @@ main(int argc, char* argv[])
     printf("dot total =  %f\n", dot);
   }
   
-  // printf("myid %d local_dot = %f \n", my_rank,local_dot);
   free(local_x); 
   free(local_y); 
 
   MPI_Finalize();
+  return 0;
 }  /* main */

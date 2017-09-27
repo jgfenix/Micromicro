@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include "mpi.h"
 
-main(int argc, char* argv[]) 
+int main(int argc, char* argv[]) 
 {
   //n = tamanho do vetor
   //my_rank = id do processo
@@ -27,7 +27,7 @@ main(int argc, char* argv[])
   double *x, *y, *local_x, *local_y;
   int    n_bar;  /* = n/p */
   double  dot, local_dot;
-  int    p, my_rank, i, n, tag=0;
+  int    p, my_rank, i, n;
   MPI_Status status;
 
   
@@ -80,4 +80,5 @@ main(int argc, char* argv[])
 
 
   MPI_Finalize();
+  return 0;
 }  /* main */
