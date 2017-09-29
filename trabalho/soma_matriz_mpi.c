@@ -36,6 +36,8 @@ int main(int argc, char const *argv[]) {
 	double matriz[n][n];
 
 	// preenchimento da matriz
+	//vai ser usado no random do preenchimento
+	// srandom(tm.tv_sec + tm.tv_usec * 1000000ul);
 	if (ID_processo == 0) {
 		for (i=0; i<n; i++) {
 			for (j = 0; j < n; j++)	{
@@ -92,12 +94,12 @@ int main(int argc, char const *argv[]) {
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	printf("local_sum=%f, ID_processo=%d\n", local_sum,ID_processo);
+	// printf("local_sum=%f, ID_processo=%d\n", local_sum,ID_processo);
 
 	//coleta de dados
 	MPI_Reduce(&local_sum, &sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 	if (ID_processo == 0) {
-		printf("\n\nsum=%f \n", sum);
+		printf("sum=%f \n", sum);
 	}
 	
 	MPI_Finalize();

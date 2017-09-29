@@ -11,7 +11,6 @@
 #include <stdlib.h> //atoi, exit
 #include <sys/time.h> //cronometro
 
-#define TIPO double
 
 int main(int argc, char const *argv[])
 {
@@ -36,22 +35,22 @@ int main(int argc, char const *argv[])
 	pclose(in);
 	
 
-	printf("\n\nRAM livre:\t\t%d Mb\n", atoi(buff));
-	if ( ((int)(sizeof(TIPO) * n *n / 1048576)) > atoi(buff))
+	// printf("\n\nRAM livre:\t\t%d Mb\n", atoi(buff));
+	if ( ((int)(sizeof(double) * n *n / 1048576)) > atoi(buff))
 	{	
-		printf("precisa de %f.0 Mb de RAM\n", (TIPO)(sizeof(TIPO) * n *n / 1048576));
-		printf("Nao sera possivel continuar o programa, SAINDO...\n\n");
+		// printf("precisa de %f.0 Mb de RAM\n", (double)(sizeof(double) * n *n / 1048576));
+		// printf("Nao sera possivel continuar o programa, SAINDO...\n\n");
 		exit(1);
 	}
-	printf("\nContinuando...\nAlocando %f.0 Mb RAM ...\n\n", (TIPO)sizeof(TIPO) * n *n / 1048576);
+	// printf("\nContinuando...\nAlocando %f.0 Mb RAM ...\n\n", (double)sizeof(double) * n *n / 1048576);
 
 	double sum = 0;
 	int i = 0, j=0;
 	
-	TIPO **matriz ;
-	matriz = calloc(n, sizeof(TIPO));
+	double **matriz ;
+	matriz = calloc(n, sizeof(double));
 	for (i = 0; i < n; i++)
-      matriz[i] = calloc(n, sizeof(TIPO));
+      matriz[i] = calloc(n, sizeof(double));
 	
 	//vai ser usado no random do preenchimento
 	// srandom(tm.tv_sec + tm.tv_usec * 1000000ul);
