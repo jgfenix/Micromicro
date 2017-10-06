@@ -53,6 +53,8 @@ int main(int argc, char const *argv[])
       matriz[i] = calloc(n, sizeof(double));
 	
 	//vai ser usado no random do preenchimento
+	// struct timeval tm;
+	// gettimeofday(&tm, NULL);
 	// srandom(tm.tv_sec + tm.tv_usec * 1000000ul);
 	
 	for (i=0; i<n; i++) {
