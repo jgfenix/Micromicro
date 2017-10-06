@@ -13,8 +13,17 @@
 #include <mpi.h>
 
 int main(int argc, char const *argv[]) {
-	int tag=0, i=0, j=0, num_processos, ID_processo;
+	int i=0, j=0, num_processos, ID_processo;
 	double sum=0, local_sum=0;
+	
+
+	if (argv[1] == NULL || atoi(argv[1]) < 1) {
+		printf("ERRO, insira o valor de 'n': \n");
+		exit(1);
+	}
+	
+	//tamanho da matriz a ser gerada
+	int n = atoi(argv[1]);
 
 	MPI_Status status;	
 
@@ -24,77 +33,72 @@ int main(int argc, char const *argv[]) {
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &ID_processo);
 
-	if (argv[1] == NULL || atoi(argv[1]) < 1) {
-		printf("ERRO, insira o valor de 'n': \n");
+	// Envio do valor de n para todos os processos
+	// MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+	if (  n%num_processos !=0 ) {
+		printf("ERROR: matriz indivisível por %d processos \n", num_processos);
+		MPI_Finalize();
 		exit(1);
 	}
 	
-	//tamanho da matriz a ser gerada
-	int n = atoi(argv[1]);
-	
+	double *vetor_local = (double*) calloc(n, sizeof(double));
+
 	//matriz global
 	double matriz[n][n];
 
 	// preenchimento da matriz
 	//vai ser usado no random do preenchimento
-	// srandom(tm.tv_sec + tm.tv_usec * 1000000ul);
+	struct timeval tm;
+	gettimeofday(&tm, NULL);
+	srandom(tm.tv_sec + tm.tv_usec * 1000000ul);
 	if (ID_processo == 0) {
 		for (i=0; i<n; i++) {
 			for (j = 0; j < n; j++)	{
-				// matriz[i][j] = random();
-				matriz[i][j] = 1.0;  
+				matriz[i][j] = rand() % 9;
+				// matriz[i][j] = 1.0;  
 			}
+		}
+
+		for (i=0; i<n; i++) {
+			for (j = 0; j < n; j++)	{
+				printf("%2.0f ", matriz[i][j]);
+				
+			}
+			printf("\n");
 		}
 
 		//envio de dados
 		for (i = 1; i < num_processos; ++i) {
-			MPI_Send(&matriz, n*n, MPI_DOUBLE, i, tag, MPI_COMM_WORLD);
+			MPI_Send( &(matriz[i][(0)]), n, MPI_DOUBLE, i, 0, MPI_COMM_WORLD) ;
+		}
+		
+		//carrega a parcela do processo 0
+		for (i = 0; i < n; ++i) {
+			(vetor_local[i]) = (matriz[0][i]);
 		}
 	}
-	else {
-		MPI_Recv(&matriz, n*n, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &status);
-	}
+	else
+		MPI_Recv(vetor_local, n, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status) ;
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	//processamento de dados
 
-	//caso 0: n == word_size
-	if (n == num_processos) {
-		for (i = 0; i < n; i++) {
-			for (j = 0; j < n; ++j) {
-				if (ID_processo == i) {
-					local_sum+= matriz[i][j];
-				}
+	printf("\n");
+	for (i = 0; i < num_processos; i++) {
+		if (i == ID_processo) {
+			local_sum = 0;
+			printf("Proc: %d ->", i );
+			for ( j = 0; j < n; ++j) {
+				printf("%.0f  ",vetor_local[j] );
+				local_sum+= vetor_local[j];
 			}
+			printf("Proc: %d -> local_sum=%.0f\n", ID_processo, local_sum);
 		}
-	}
-
-	//caso 1 e caso 2:
-		//1:	n > word_size : algum processo vai ficar sobrecarregado
-		//2:	n < word_size : algum processo vai ficar ocioso
-	// o ideal seria distribuir proporcionalmente para cada processo,
-	// mas isso é uma refinação desnecessária quadno o objetivo é entender
-	// o uso da biblioteca
-	else {
-		int counter = 0;
-		for (i = 0; i < n; i++) {
-			// printf("counter==%d\n",counter);
-			for (j = 0; j < n; ++j) {
-				if (ID_processo == counter) {
-					local_sum+= matriz[i][j];
-				}
-			}
-			if (counter < ID_processo)
-				counter++;
-			else
-				counter = num_processos-1;
-		}
-	}
+	}	
 
 	MPI_Barrier(MPI_COMM_WORLD);
-
-	// printf("local_sum=%f, ID_processo=%d\n", local_sum,ID_processo);
 
 	//coleta de dados
 	MPI_Reduce(&local_sum, &sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
