@@ -3,4 +3,4 @@ repositório dedicado a versionar os trabalhos e documentos da disciplina FEN06 
 
 Dependências:
 
-sudo apt-getlibopenmpi-dev libopenmpi1.10 openmpi-bin openmpi-common openmpi-doc
+libopenmpi-dev libopenmpi1.10 openmpi-bin openmpi-common openmpi-doc
