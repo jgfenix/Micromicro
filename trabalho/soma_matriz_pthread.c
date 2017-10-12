@@ -1,6 +1,5 @@
 #include <stdio.h>
-#include <math.h> //random
-#include <stdlib.h> //atoi, exit
+#include <stdlib.h> //atoi, exit, random
 #include <sys/time.h> //cronometro
 #include <pthread.h>
 
@@ -10,111 +9,101 @@
 #endif
 
 struct matriz_e_tamanho {
-	double** m;
-	long n;
+	double** m; //ponteiro pra matriz
+	long n; //tamanho da matriz quadrada
 	double sum;
+	pthread_mutex_t mutex;
+	pthread_t thread[PROCESSOS_E_THREADS];
+	pthread_cond_t cond;
 };
 
 // TODO(se der tempo): Thread parent so esta gerando e distribuindo a matriz, nao esta processando ela
 
 //controle do numero de threads childs
 long tID = 0; //thread 0 é a thread que gera a matriz
-pthread_mutex_t mutex;
-
+int controle_linhas=0;
 
 void *ProcessaMatriz(void *m_n) {
-	pthread_mutex_lock(&mutex);
-		long local_tID = tID;
-		tID++;
-	pthread_mutex_unlock(&mutex);
-
-	double local_sum=0;
-	
+	//struct passada como parametro pra thread executar
 	struct matriz_e_tamanho *mat_n = (struct matriz_e_tamanho *)m_n;
 
-	int i,j;
+	pthread_mutex_lock(&mat_n->mutex);//bloqueia a regiao critica
+		long local_tID = tID;
+		tID++;
+		while(tID< PROCESSOS_E_THREADS) //bloqueia a thread ate que todos tenham um ID
+			pthread_cond_wait( &mat_n->cond, &mat_n->mutex );
 
+		pthread_cond_signal(&mat_n->cond);//sinaliza para as threads continuarem pois todas pegaram um ID
+	pthread_mutex_unlock(&mat_n->mutex);//desbloqueia a regiao critica
+
+	int i=0, //linhas
+		j=0, //colunas
+		tamanho_sub_matriz = mat_n->n / PROCESSOS_E_THREADS;
+	
+	double local_sum=0;
+	
 	//processamento de dados
-
-	//caso 0: size(matriz) == size(threads)
-	if (mat_n->n == PROCESSOS_E_THREADS) {
-		for (i = 0; i < mat_n->n; i++) {
-			for (j = 0; j < mat_n->n; ++j) {
-				if (local_tID == i) {
-					local_sum+= mat_n->m[i][j];
-				}
-			}
+	local_sum=0;
+	for (i = tamanho_sub_matriz*local_tID; i < ((local_tID+1)*tamanho_sub_matriz) ; ++i) {
+		for (j = 0; j < mat_n->n; ++j)
+		{
+			local_sum += mat_n->m[i][j];
+			// printf("thread %ld | m[%d][%d]=%.0f\n",local_tID,i,j, mat_n->m[i][j] );
 		}
 	}
+	//mutex para nao ter mais de uma thread acessando a mesma variavel comum a todas
+	pthread_mutex_lock(&mat_n->mutex);//bloqueia a regiao critica
+		mat_n->sum+= local_sum;
+	pthread_mutex_unlock(&mat_n->mutex);//desbloqueia a regiao critica
 
-	//caso 1 e caso 2:
-		//1:	size(matriz) > size(threads) : algum processo vai ficar sobrecarregado
-		//2:	size(matriz) < size(threads) : algum processo vai ficar ocioso
-	// o ideal seria distribuir proporcionalmente para cada processo,
-	// mas isso é uma refinação desnecessária quando o objetivo é entender
-	// o uso da biblioteca
-	else {
-		int counter = 0;
-		for (i = 0; i < mat_n->n; i++) {
-			// printf("counter==%d\n",counter);
-			for (j = 0; j < mat_n->n; ++j) {
-				if (local_tID == counter) {
-					local_sum+= mat_n->m[i][j];
-				}
-			}
-			if (counter < local_tID)
-				counter++;
-			else
-				counter = PROCESSOS_E_THREADS-1;
-		}
-	}
-	// printf("Thread: %ld| LOCAL_SUM==%f\n", local_tID, local_sum);
-	// pthread_exit(NULL);
-	pthread_mutex_lock(&mutex);
-		mat_n->sum+=local_sum;
-	pthread_mutex_unlock(&mutex);
 	return NULL;
 }
 
 void *CriaMatriz(void *tamanhoMatriz) {
 	long n ;
+	double confere=0; //variavel so pra conferir se as threads estao somando corretamente
 	n = (long)tamanhoMatriz;
 	int i, j;
  
 	double **matriz = (double**)malloc(n * sizeof(double*)); //Aloca um Vetor de Ponteiros
 	//vai ser usado no random do preenchimento
-	// srandom(tm.tv_sec + tm.tv_usec * 1000000ul);
+	struct timeval tm;
+	gettimeofday(&tm, NULL);
+	srandom(tm.tv_sec + tm.tv_usec * 1000000ul);
 	for (i = 0; i < n; i++){ //Percorre as linhas do Vetor de Ponteiros
 		matriz[i] = (double*) malloc(n * sizeof(double)); //Aloca um Vetor de Inteiros para cada posição do Vetor de Ponteiros.
 		for (j = 0; j < n; j++){ //Percorre o Vetor de Inteiros atual.
-			// matriz[i][j] = random();
-			matriz[i][j] = 1.0;  
+			confere+= matriz[i][j] = rand() % 9;
+			// printf("%.0f ",matriz[i][j] );
 		}
+		// printf("\n");
 	}
-	
+	printf("CONFERE==%.0f\n", confere );
 	//struct para passar a matriz e o tamanho dela
 	struct matriz_e_tamanho* mat_n = malloc( sizeof( struct matriz_e_tamanho ));
 	mat_n->m = matriz;
 	mat_n->n = n;
 	mat_n->sum = 0;
+	
+	//inicia o mutex
+	pthread_mutex_init(&mat_n->mutex, NULL);
+	//inicia a condicao de espera
+	pthread_cond_init(&mat_n->cond, NULL);
 
 	//criacao de novas threads
-	int sub_threads = PROCESSOS_E_THREADS;//-1; //-1 pois a 0 já foi criada
+	int sub_threads = PROCESSOS_E_THREADS;
 
-	pthread_t thread[sub_threads];
 	void *status;
-	//inicia o mutex
-	pthread_mutex_init(&mutex, NULL);
 	
 	int t_child =0;
 	
 	for(t_child =0; t_child < sub_threads; t_child++) {
-		pthread_create(&thread[t_child], NULL, ProcessaMatriz, mat_n); //enviar a matriz
+		pthread_create(&(mat_n->thread[t_child]), NULL, ProcessaMatriz, mat_n); //enviar a matriz
 	}
 	
 	//espera todas as threads acabarem
 	for(t_child = 0; t_child < sub_threads; t_child++) {
-		pthread_join(thread[t_child], &status);
+		pthread_join(mat_n->thread[t_child], &status);
 	}
 
 	printf("sum==%f\n",mat_n->sum );
