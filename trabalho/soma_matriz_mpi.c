@@ -7,13 +7,12 @@
 // Na saida, o processo 0 deve imprimir o valor da soma de todos os elementos
 
 #include <stdio.h>
-#include <math.h> //random
-#include <stdlib.h> //atoi, exit
+#include <stdlib.h> //atoi, exit, random
 #include <sys/time.h> //cronometro
 #include <mpi.h>
 
 int main(int argc, char const *argv[]) {
-	int i=0, j=0, num_processos, ID_processo;
+	int i=0, j=0, num_processos=0, ID_processo=0;
 	double sum=0, local_sum=0;
 	
 
@@ -33,70 +32,48 @@ int main(int argc, char const *argv[]) {
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &ID_processo);
 
-	// Envio do valor de n para todos os processos
-	// MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
 	if (  n%num_processos !=0 ) {
 		printf("ERROR: matriz indivisível por %d processos \n", num_processos);
 		MPI_Finalize();
 		exit(1);
 	}
 	
-	double *vetor_local = (double*) calloc(n, sizeof(double));
+	double *vetor_local = (double*) calloc(n*n/num_processos, sizeof(double));
 
 	//matriz global
 	double matriz[n][n];
-
 	// preenchimento da matriz
-	//vai ser usado no random do preenchimento
 	struct timeval tm;
 	gettimeofday(&tm, NULL);
 	srandom(tm.tv_sec + tm.tv_usec * 1000000ul);
 	if (ID_processo == 0) {
 		for (i=0; i<n; i++) {
 			for (j = 0; j < n; j++)	{
-				matriz[i][j] = rand() % 9;
-				// matriz[i][j] = 1.0;  
+				// matriz[i][j] = rand() % 9;
+				matriz[i][j] = 1.0;  
 			}
-		}
-
-		for (i=0; i<n; i++) {
-			for (j = 0; j < n; j++)	{
-				printf("%2.0f ", matriz[i][j]);
-				
-			}
-			printf("\n");
 		}
 
 		//envio de dados
-		for (i = 1; i < num_processos; ++i) {
-			MPI_Send( &(matriz[i][(0)]), n, MPI_DOUBLE, i, 0, MPI_COMM_WORLD) ;
+		for (i = 1; i < num_processos; i++) {
+			MPI_Send( &(matriz[i][(0)]), n*n/num_processos, MPI_DOUBLE, i, 0, MPI_COMM_WORLD) ;
 		}
-		
 		//carrega a parcela do processo 0
-		for (i = 0; i < n; ++i) {
+		for (i = 0; i < n*n/num_processos; i++) {
 			(vetor_local[i]) = (matriz[0][i]);
 		}
 	}
 	else
-		MPI_Recv(vetor_local, n, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status) ;
+		MPI_Recv(vetor_local, n*n/num_processos, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status) ;
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	//processamento de dados
-
-	printf("\n");
-	for (i = 0; i < num_processos; i++) {
-		if (i == ID_processo) {
-			local_sum = 0;
-			printf("Proc: %d ->", i );
-			for ( j = 0; j < n; ++j) {
-				printf("%.0f  ",vetor_local[j] );
-				local_sum+= vetor_local[j];
-			}
-			printf("Proc: %d -> local_sum=%.0f\n", ID_processo, local_sum);
-		}
-	}	
+	local_sum = 0;
+	for ( j = 0; j < n*n/num_processos; j++) {
+		local_sum+= vetor_local[j];
+	}
+	printf("Proc: %d -> local_sum=%.0f\n", ID_processo, local_sum);
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
