@@ -11,6 +11,8 @@
 #include <sys/time.h> //cronometro
 #include <mpi.h>
 
+struct timeval  tv1, tv2;
+
 int main(int argc, char const *argv[]) {
 	int i=0, j=0, num_processos=0, ID_processo=0;
 	double sum=0, local_sum=0;
@@ -67,19 +69,33 @@ int main(int argc, char const *argv[]) {
 		MPI_Recv(vetor_local, n*n/num_processos, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status) ;
 
 	MPI_Barrier(MPI_COMM_WORLD);
+	
+	//inicio da contagem de tempo
+	if (ID_processo == 0) {
+		gettimeofday(&tv1, NULL);
+	}
 
 	//processamento de dados
 	local_sum = 0;
 	for ( j = 0; j < n*n/num_processos; j++) {
 		local_sum+= vetor_local[j];
 	}
-	printf("Proc: %d -> local_sum=%.0f\n", ID_processo, local_sum);
+	//printf("Proc: %d -> local_sum=%.0f\n", ID_processo, local_sum);
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	//coleta de dados
 	MPI_Reduce(&local_sum, &sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	
 	if (ID_processo == 0) {
+		
+		//fim da contagem de tempo
+		
+		gettimeofday(&tv2, NULL);
+		printf ("Total time = %f seconds\n",
+	         (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
+	         (double) (tv2.tv_sec - tv1.tv_sec));
+
 		printf("sum=%f \n", sum);
 	}
 	

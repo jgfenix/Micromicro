@@ -5,7 +5,7 @@
 
 
 #ifndef PROCESSOS_E_THREADS
-#define PROCESSOS_E_THREADS 4
+#define PROCESSOS_E_THREADS 2
 #endif
 
 struct matriz_e_tamanho {
@@ -16,6 +16,8 @@ struct matriz_e_tamanho {
 	pthread_t thread[PROCESSOS_E_THREADS];
 	pthread_cond_t cond;
 };
+
+struct timeval  tv1, tv2;
 
 // TODO(se der tempo): Thread parent so esta gerando e distribuindo a matriz, nao esta processando ela
 
@@ -73,12 +75,10 @@ void *CriaMatriz(void *tamanhoMatriz) {
 	for (i = 0; i < n; i++){ //Percorre as linhas do Vetor de Ponteiros
 		matriz[i] = (double*) malloc(n * sizeof(double)); //Aloca um Vetor de Inteiros para cada posição do Vetor de Ponteiros.
 		for (j = 0; j < n; j++){ //Percorre o Vetor de Inteiros atual.
-			confere+= matriz[i][j] = rand() % 9;
-			// printf("%.0f ",matriz[i][j] );
+			confere+= matriz[i][j] = 1.0;//rand() % 9;
 		}
-		// printf("\n");
 	}
-	printf("CONFERE==%.0f\n", confere );
+	//printf("CONFERE==%.0f\n", confere );
 	//struct para passar a matriz e o tamanho dela
 	struct matriz_e_tamanho* mat_n = malloc( sizeof( struct matriz_e_tamanho ));
 	mat_n->m = matriz;
@@ -96,7 +96,10 @@ void *CriaMatriz(void *tamanhoMatriz) {
 	void *status;
 	
 	int t_child =0;
-	
+	//inicio da contagem de tempo
+	gettimeofday(&tv1, NULL);
+
+
 	for(t_child =0; t_child < sub_threads; t_child++) {
 		pthread_create(&(mat_n->thread[t_child]), NULL, ProcessaMatriz, mat_n); //enviar a matriz
 	}
@@ -105,6 +108,11 @@ void *CriaMatriz(void *tamanhoMatriz) {
 	for(t_child = 0; t_child < sub_threads; t_child++) {
 		pthread_join(mat_n->thread[t_child], &status);
 	}
+
+	gettimeofday(&tv2, NULL);
+	printf ("Total time = %f seconds\n",
+         (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
+         (double) (tv2.tv_sec - tv1.tv_sec));
 
 	printf("sum==%f\n",mat_n->sum );
 	free(matriz);
@@ -127,18 +135,10 @@ int main (int argc, char *argv[])
 	void *status;
 	
 	//thread 0 que gera a matriz
-	//inicio da contagem de tempo
-	struct timeval  tv1, tv2;
-	gettimeofday(&tv1, NULL);
 
 	pthread_create(&thread0, NULL, CriaMatriz, (void *)n);
 
 	pthread_join(thread0, &status);
 
-	gettimeofday(&tv2, NULL);
-	printf ("Total time = %f seconds\n",
-         (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
-         (double) (tv2.tv_sec - tv1.tv_sec));
-	// printf("Main: program completed. Exiting.\n");
 	pthread_exit(NULL);
 }
