@@ -42,33 +42,41 @@ int main(int argc, char const *argv[]) {
 	
 	double *vetor_local = (double*) calloc(n*n/num_processos, sizeof(double));
 
-	//matriz global
-	double matriz[n][n];
 	// preenchimento da matriz
 	struct timeval tm;
 	gettimeofday(&tm, NULL);
 	srandom(tm.tv_sec + tm.tv_usec * 1000000ul);
 	if (ID_processo == 0) {
+		//matriz global
+		double matriz[n][n];
+		double soma = 0.0;
 		for (i=0; i<n; i++) {
 			for (j = 0; j < n; j++)	{
-				// matriz[i][j] = rand() % 9;
-				matriz[i][j] = 1.0;  
+				soma += matriz[i][j] = rand() % 9;
+				// matriz[i][j] = 1.0;  
 			}
 		}
 
+		printf("\n\nSOMA=%f\n",soma );
+
 		//envio de dados
 		for (i = 1; i < num_processos; i++) {
-			MPI_Send( &(matriz[i][(0)]), n*n/num_processos, MPI_DOUBLE, i, 0, MPI_COMM_WORLD) ;
+			MPI_Send( &(matriz[i*n/num_processos][(0)]), n*n/num_processos, MPI_DOUBLE, i, 0, MPI_COMM_WORLD) ;
 		}
 		//carrega a parcela do processo 0
-		for (i = 0; i < n*n/num_processos; i++) {
-			(vetor_local[i]) = (matriz[0][i]);
+		int j = 0;
+		int k = 0;
+		for (i = 0; i < n/num_processos; i++) { //1000 | 2 
+			for (j = 0; j < n; j++) {
+				(vetor_local[k]) = (matriz[i][j]);
+				k++;
+			}
 		}
 	}
 	else
 		MPI_Recv(vetor_local, n*n/num_processos, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status) ;
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	//MPI_Barrier(MPI_COMM_WORLD);
 	
 	//inicio da contagem de tempo
 	if (ID_processo == 0) {
@@ -82,7 +90,7 @@ int main(int argc, char const *argv[]) {
 	}
 	//printf("Proc: %d -> local_sum=%.0f\n", ID_processo, local_sum);
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	//MPI_Barrier(MPI_COMM_WORLD);
 
 	//coleta de dados
 	MPI_Reduce(&local_sum, &sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
